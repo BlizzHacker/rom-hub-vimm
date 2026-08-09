@@ -64,7 +64,7 @@ library credentials.
 ## Install into ROM Hub
 
 ```sh
-rom-hub plugin install https://git.moveweight.com/blizzhacker/rom-hub-vimm --ref v0.2.0
+rom-hub plugin install https://git.moveweight.com/blizzhacker/rom-hub-vimm --ref v0.2.1
 rom-hub plugin config vimm-net --set catalog_path=/path/to/catalog.json
 rom-hub search "sonic" --platform genesis-slash-megadrive
 rom-hub stream vimm-net VAULT_ID
@@ -79,7 +79,7 @@ To make the provider appear in a ROMarr or ROM Hub plugin directory:
 
 ```sh
 rom-hub catalog add blizzhacker-vimm \
-  https://git.moveweight.com/blizzhacker/rom-hub-vimm/raw/tag/v0.2.0/catalog/plugins.json
+  https://git.moveweight.com/blizzhacker/rom-hub-vimm/raw/tag/v0.2.1/catalog/plugins.json
 rom-hub catalog refresh
 ```
 
