@@ -32,7 +32,8 @@ class Search(SearchProvider):
                 continue
             exact = title_text == " ".join(terms) if terms else False
             prefix = title_text.startswith(" ".join(terms)) if terms else False
-            ranked.append(((not exact, not prefix, entry.title.casefold(), entry.vault_id), entry, mapped))
+            exact_id = len(terms) == 1 and entry.vault_id.casefold() == terms[0]
+            ranked.append(((not exact_id, not exact, not prefix, entry.title.casefold(), entry.vault_id), entry, mapped))
 
         results = []
         for _, entry, mapped in sorted(ranked, key=lambda row: row[0])[: max(0, limit)]:
