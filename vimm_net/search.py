@@ -27,7 +27,8 @@ class Search(SearchProvider):
                 continue
             title_words = _words(entry.title)
             title_text = " ".join(title_words)
-            if terms and not all(term in title_text for term in terms):
+            searchable = f"{title_text} {entry.vault_id}"
+            if terms and not all(term in searchable for term in terms):
                 continue
             exact = title_text == " ".join(terms) if terms else False
             prefix = title_text.startswith(" ".join(terms)) if terms else False
@@ -48,4 +49,3 @@ class Search(SearchProvider):
                 },
             ))
         return results
-

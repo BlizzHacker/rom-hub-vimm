@@ -33,10 +33,16 @@ def test_rejects_cross_site_download_url(tmp_path):
 
 def test_rejects_play_url_for_a_different_vault_id(tmp_path):
     payload = json.loads(FIXTURE.read_text())
-    payload["items"][1]["play_url"] = "https://vimm.net/vault/999?p=play"
+    payload["items"][1]["play_url"] = "https://vimm.net/vault/?p=play&mediaId=999"
     path = tmp_path / "catalog.json"
     path.write_text(json.dumps(payload))
     assert [entry.vault_id for entry in load(config(path))] == ["101", "303"]
+
+
+def test_accepts_current_and_legacy_vimm_player_urls():
+    entries = load(config())
+    assert entries[0].play_url == "https://vimm.net/vault/?p=play&mediaId=101"
+    assert entries[1].play_url == "https://vimm.net/vault/202?p=play"
 
 
 def test_duplicate_ids_do_not_override_first_capture(tmp_path):
@@ -45,4 +51,3 @@ def test_duplicate_ids_do_not_override_first_capture(tmp_path):
     path = tmp_path / "catalog.json"
     path.write_text(json.dumps(payload))
     assert by_id(config(path), "101").title == "Example Adventure"
-

@@ -40,10 +40,19 @@ def test_search_can_filter_by_rom_hub_platform_slug():
     assert [row.source_id for row in Search(ctx()).search("example", "nes", 10)] == ["303"]
 
 
+def test_search_matches_vault_id():
+    assert [row.source_id for row in Search(ctx()).search("101", None, 10)] == ["101"]
+
+
 def test_stream_returns_only_captured_play_page():
     target = Stream(ctx()).resolve(result("202", "Stream Example"))
     assert target.kind == "url"
     assert target.target == "https://vimm.net/vault/202?p=play"
+
+
+def test_stream_accepts_current_vimm_player_url():
+    target = Stream(ctx()).resolve(result("101", "Example Adventure"))
+    assert target.target == "https://vimm.net/vault/?p=play&mediaId=101"
 
 
 def test_stream_refuses_download_only_entry():

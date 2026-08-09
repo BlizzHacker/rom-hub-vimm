@@ -57,11 +57,22 @@ def _page_id(url: str) -> str | None:
 
 
 def _play_id(url: str) -> str | None:
-    vault_id = _page_id(url)
-    if not vault_id:
+    if not _https_vimm(url):
         return None
-    values = parse_qs(urlsplit(url).query).get("p", [])
-    return vault_id if any(v.lower() == "play" for v in values) else None
+    parts = urlsplit(url)
+    query = parse_qs(parts.query)
+    if not any(value.lower() == "play" for value in query.get("p", [])):
+        return None
+
+    # Vimm currently links players as /vault/?p=play&mediaId=<id>. Keep
+    # accepting the older detail-page form for existing catalogues too.
+    vault_id = _page_id(url)
+    if vault_id:
+        return vault_id
+    if parts.path.rstrip("/") != "/vault":
+        return None
+    media_ids = query.get("mediaId", [])
+    return media_ids[0] if len(media_ids) == 1 and media_ids[0].isdecimal() else None
 
 
 def _as_size(value) -> int | None:
@@ -152,4 +163,3 @@ def by_id(config: dict, source_id: str) -> Entry:
         if item.vault_id == wanted:
             return item
     raise CatalogError(f"Vimm vault id {wanted!r} is not in the local catalogue")
-
