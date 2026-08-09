@@ -8,9 +8,9 @@
       "author": "MoveWeight",
       "repository": "https://git.moveweight.com/moveweight/rom-hub-vimm",
       "install": "https://git.moveweight.com/moveweight/rom-hub-vimm",
-      "download": "https://git.moveweight.com/moveweight/rom-hub-vimm/archive/v0.1.1.tar.gz",
-      "version": "0.1.1",
-      "ref": "v0.1.1",
+      "download": "https://git.moveweight.com/moveweight/rom-hub-vimm/archive/v0.1.4.tar.gz",
+      "version": "0.1.4",
+      "ref": "v0.1.4",
       "updated": "2026-08-09",
       "rpp_version": "1",
       "capabilities": ["search", "importer", "stream"],
@@ -25,7 +25,7 @@
       "search_only": false,
       "key_required": false,
       "in_tree": false,
-      "description": "Searches a Chrome-captured Vimm catalogue, imports entries with a public download action, and launches entries with Play Online in Vimm's hosted player.",
+      "description": "Searches a browser-captured Vimm catalogue, imports entries with a public download action, and launches entries with Play Online in Vimm's hosted player.",
       "terms": "Vimm hosts mixed game content. The catalogue records only controls the source page presents to the user's browser. The provider does not grant redistribution rights; operators are responsible for using downloads and hosted play in accordance with applicable law and the source's terms.",
       "comments": "The companion Manifest V3 extension builds the local catalogue at a conservative one-request-at-a-time rate, checkpoints progress, and adds a Vimm search panel to the MoveWeight RomM and ROMarr domains. Imports require a captured public GET download action; streams require a captured Play Online action."
     }

@@ -6,16 +6,16 @@ This repository contains two pieces that share one catalogue:
    capabilities. ROMarr/ROM Hub can search the captured Vimm catalogue, import
    an entry whose page exposed a public download action, and resolve an entry
    whose page exposed **Play Online** to Vimm's hosted player.
-2. **A Manifest V3 Chrome extension** that builds the catalogue and adds a
+2. **A Manifest V3 Chromium extension** (Brave/Chrome) that builds the catalogue and adds a
    local Vimm search panel to `romm.moveweight.com` and
    `romarr.moveweight.com`.
 
-The extension records vault id, title, platform, page URL, size, and whether
+The extension records vault id, media id, title, platform, page URL, filename, size, and whether
 the detail page exposed Play Online and/or a public GET download action. The
 provider revalidates every URL and only accepts HTTPS URLs on `vimm.net` or a
 Vimm subdomain.
 
-## Build the Chrome extension
+## Build the Chromium extension
 
 Run on the build host:
 
@@ -24,8 +24,8 @@ Run on the build host:
 ```
 
 This creates `dist/vimm-catalogue-extension.zip`. For development, load the
-unpacked `extension/` directory at `chrome://extensions` with Developer mode
-enabled.
+unpacked `extension/` directory at `brave://extensions` or
+`chrome://extensions` with Developer mode enabled.
 
 ## Build a catalogue
 
@@ -34,7 +34,8 @@ The cataloguer:
 
 - checks `robots.txt` before scanning;
 - discovers Vault list and detail pages from links already published by Vimm;
-- makes one request at a time with a configurable delay (minimum 1000 ms);
+- makes one request at a time with a configurable delay (3000 ms by default,
+  minimum 1000 ms) and backs off automatically after HTTP 429 responses;
 - checkpoints after every page so a long pass can resume;
 - never opens Play Online sessions or downloads game files during the scan.
 
@@ -45,7 +46,7 @@ absolute path to the exported file.
 ## Install into ROM Hub
 
 ```sh
-rom-hub plugin install https://git.moveweight.com/moveweight/rom-hub-vimm --ref v0.1.1
+rom-hub plugin install https://git.moveweight.com/moveweight/rom-hub-vimm --ref v0.1.4
 rom-hub plugin config vimm-net --set catalog_path=/path/to/catalog.json
 rom-hub search "sonic" --platform genesis-slash-megadrive
 rom-hub stream vimm-net VAULT_ID
@@ -62,7 +63,7 @@ repository's published directory once:
 
 ```sh
 rom-hub catalog add moveweight-vimm \
-  https://git.moveweight.com/moveweight/rom-hub-vimm/raw/tag/v0.1.1/catalog/plugins.json
+  https://git.moveweight.com/moveweight/rom-hub-vimm/raw/tag/v0.1.4/catalog/plugins.json
 rom-hub catalog refresh
 ```
 
@@ -73,7 +74,7 @@ The extension runs its integration content script only on:
 - `https://romm.moveweight.com/*`
 - `https://romarr.moveweight.com/*`
 
-The floating **Vimm** button searches the catalogue stored in Chrome. **Play on
+The floating **Vimm** button searches the catalogue stored in the browser. **Play on
 Vimm** opens the hosted player. **Open download page** returns to the Vimm
 detail page where its public download control is available. The extension does
 not receive or store RomM/ROMarr credentials.
