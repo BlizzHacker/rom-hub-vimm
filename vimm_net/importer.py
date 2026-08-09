@@ -40,7 +40,7 @@ class Importer(ImportProvider):
         platform = platform_for(entry.platform)
         if platform is None:
             raise ImportRefused(
-                f"Vimm platform {entry.platform!r} needs an exact RomM mapping"
+                f"Vimm platform {entry.platform!r} needs an exact library platform mapping"
             )
         return FetchPlan(
             files=[FetchFile(
@@ -51,4 +51,3 @@ class Importer(ImportProvider):
             platform=platform,
             collection=self.ctx.config.get("collection") or "Vimm.net",
         )
-

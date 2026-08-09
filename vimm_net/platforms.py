@@ -1,4 +1,4 @@
-"""Exact Vimm label to RomM slug mapping. Unknown labels are never guessed."""
+"""Exact Vimm label to ROM Hub platform slug mapping. Unknown labels are never guessed."""
 
 PLATFORMS = {
     "Atari 2600": "atari2600",
@@ -36,4 +36,3 @@ def platform_for(label: str) -> str | None:
         if name.casefold() == wanted:
             return slug
     return None
-

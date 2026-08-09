@@ -5,12 +5,12 @@
     {
       "slug": "vimm-net",
       "name": "Vimm.net",
-      "author": "MoveWeight",
-      "repository": "https://git.moveweight.com/moveweight/rom-hub-vimm",
-      "install": "https://git.moveweight.com/moveweight/rom-hub-vimm",
-      "download": "https://git.moveweight.com/moveweight/rom-hub-vimm/archive/v0.1.4.tar.gz",
-      "version": "0.1.4",
-      "ref": "v0.1.4",
+      "author": "BlizzHacker",
+      "repository": "https://git.moveweight.com/blizzhacker/rom-hub-vimm",
+      "install": "https://git.moveweight.com/blizzhacker/rom-hub-vimm",
+      "download": "https://git.moveweight.com/blizzhacker/rom-hub-vimm/archive/v0.2.0.tar.gz",
+      "version": "0.2.0",
+      "ref": "v0.2.0",
       "updated": "2026-08-09",
       "rpp_version": "1",
       "capabilities": ["search", "importer", "stream"],
@@ -27,7 +27,7 @@
       "in_tree": false,
       "description": "Searches a browser-captured Vimm catalogue, imports entries with a public download action, and launches entries with Play Online in Vimm's hosted player.",
       "terms": "Vimm hosts mixed game content. The catalogue records only controls the source page presents to the user's browser. The provider does not grant redistribution rights; operators are responsible for using downloads and hosted play in accordance with applicable law and the source's terms.",
-      "comments": "The companion Manifest V3 extension builds the local catalogue at a conservative one-request-at-a-time rate, checkpoints progress, and adds a Vimm search panel to the MoveWeight RomM and ROMarr domains. Imports require a captured public GET download action; streams require a captured Play Online action."
+      "comments": "The companion Manifest V3 extension builds a local checkpointed catalogue and can add instant Vimm search, play, and download actions to any operator-approved hosted library origin. The ROM Hub provider is frontend-neutral and supports RomM, Gaseous, Retrom, LaunchBox-oriented workflows, ROMarr, Yarr.it, and other consumers of the RPP v1 interface."
     }
   ]
 }

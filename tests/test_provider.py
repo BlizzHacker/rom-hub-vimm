@@ -36,7 +36,7 @@ def test_search_matches_title_and_maps_platform():
     }
 
 
-def test_search_can_filter_by_romm_slug():
+def test_search_can_filter_by_rom_hub_platform_slug():
     assert [row.source_id for row in Search(ctx()).search("example", "nes", 10)] == ["303"]
 
 
@@ -67,4 +67,3 @@ def test_importer_refuses_stream_only_entry():
 def test_operator_can_disable_downloads():
     with pytest.raises(ImportRefused, match="disabled"):
         Importer(ctx(allow_downloads=False)).plan(result("101"))
-
