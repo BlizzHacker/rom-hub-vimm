@@ -1,0 +1,21 @@
+[plugin]
+slug        = "vimm-net"
+name        = "Vimm.net"
+version     = "0.1.0"
+rpp_version = "1"
+license     = "MIT"
+
+[capabilities]
+search   = "vimm_net.search:Search"
+importer = "vimm_net.importer:Importer"
+stream   = "vimm_net.stream:Stream"
+
+[permissions]
+network  = ["vimm.net", "*.vimm.net"]
+romm_api = []
+
+[config]
+catalog_path    = { type = "str", default = "" }
+collection      = { type = "str", default = "Vimm.net" }
+allow_downloads = { type = "bool", default = true }
+

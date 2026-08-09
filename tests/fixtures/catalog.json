@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "generated_at": "2026-08-09T00:00:00Z",
+  "items": [
+    {
+      "vault_id": "101",
+      "title": "Example Adventure",
+      "platform": "Game Boy Advance",
+      "page_url": "https://vimm.net/vault/101",
+      "playable": true,
+      "play_url": "https://vimm.net/vault/101?p=play",
+      "downloadable": true,
+      "download_url": "https://download2.vimm.net/?mediaId=9001",
+      "filename": "Example Adventure.7z",
+      "size_bytes": 123456
+    },
+    {
+      "vault_id": "202",
+      "title": "Stream Example",
+      "platform": "Super Nintendo",
+      "page_url": "https://vimm.net/vault/202",
+      "playable": true,
+      "play_url": "https://vimm.net/vault/202?p=play",
+      "downloadable": false,
+      "download_url": ""
+    },
+    {
+      "vault_id": "303",
+      "title": "Download Example",
+      "platform": "Nintendo Entertainment System",
+      "page_url": "https://vimm.net/vault/303",
+      "playable": false,
+      "play_url": "",
+      "downloadable": true,
+      "download_url": "https://download3.vimm.net/?mediaId=9003",
+      "filename": "Download Example.7z"
+    }
+  ]
+}
+
