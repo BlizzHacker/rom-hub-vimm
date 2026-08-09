@@ -45,7 +45,7 @@ absolute path to the exported file.
 ## Install into ROM Hub
 
 ```sh
-rom-hub plugin install https://git.moveweight.com/badkid/rom-hub-vimm --ref v0.1.0
+rom-hub plugin install https://git.moveweight.com/moveweight/rom-hub-vimm --ref v0.1.1
 rom-hub plugin config vimm-net --set catalog_path=/path/to/catalog.json
 rom-hub search "sonic" --platform genesis-slash-megadrive
 rom-hub stream vimm-net VAULT_ID
@@ -62,7 +62,7 @@ repository's published directory once:
 
 ```sh
 rom-hub catalog add moveweight-vimm \
-  https://git.moveweight.com/badkid/rom-hub-vimm/raw/tag/v0.1.0/catalog/plugins.json
+  https://git.moveweight.com/moveweight/rom-hub-vimm/raw/tag/v0.1.1/catalog/plugins.json
 rom-hub catalog refresh
 ```
 
