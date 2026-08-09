@@ -1,7 +1,7 @@
 [plugin]
 slug        = "vimm-net"
 name        = "Vimm.net"
-version     = "0.2.2"
+version     = "0.2.3"
 rpp_version = "1"
 license     = "MIT"
 
