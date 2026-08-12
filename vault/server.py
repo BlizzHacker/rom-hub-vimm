@@ -44,43 +44,82 @@ PUBLIC_BASE = os.environ.get("VIMM_PUBLIC_BASE", "https://vimm.yarrit.com").rstr
 _catalog = {}
 _catalog_loaded = 0
 
-CORE_TO_EJS = {
-    "nes": "nes", "snes": "snes", "n64": "n64", "gba": "gba",
-    "gb": "gb", "gbc": "gbc", "genesis": "segaMD", "segacd": "segaCD",
-    "sega32x": "sega32x", "sms": "segaMS", "gamegear": "segaGG",
-    "psx": "psx", "atari2600": "atari2600", "atari5200": "atari5200",
-    "atari7800": "atari7800", "lynx": "lynx", "dc": "dc",
-    "saturn": "segaSaturn", "nds": "nds", "ngc": "ngc", "wii": "wii",
-    "psp": "psp", "ps2": "ps2", "tg16": "pce", "tgcd": "pce",
-    "jaguar": "jaguar", "3do": "3do", "cdi": "cdi",
+# Every system EmulatorJS can boot, copied from getCores() in the release this
+# server serves. It is the ONLY authority on the question.
+#
+# Guessing at this list is a known way to lose a thousand games at a time: four
+# invalid core names once cost the RomM Xbox client 1,451 titles, and the
+# failure is silent both ways -- an invented name 404s at the core download,
+# and a name left out quietly hides a system that works perfectly.
+EJS_SYSTEMS = frozenset({
+    "3do", "amiga", "arcade", "atari2600", "atari5200", "atari7800", "c64",
+    "c128", "coleco", "dos", "gb", "gba", "jaguar", "lynx", "mame", "n64",
+    "nds", "nes", "ngp", "pce", "pcfx", "pet", "plus4", "psx", "psp", "sega",
+    "sega32x", "segaCD", "segaGG", "segaMD", "segaMS", "segaSaturn", "snes",
+    "vb", "vic20", "ws",
+})
+
+# The scraper reads EJS_core straight off vimm.net's own player page, so most
+# catalogue values are already EmulatorJS ids and pass through untouched. This
+# holds only the ones that do not:
+#
+#   segacd  Vimm writes it lower-case; EmulatorJS wants segaCD, and the
+#           mismatch 404s the core download for all 190 Sega CD entries.
+#   gbc     Game Boy Color runs on the Game Boy core.
+#   tg16    TurboGrafx-16 is mednafen_pce.
+#
+# Deliberately absent, and each one is a decision rather than an oversight:
+# ps2, gamecube, wii, wiiware, xbox, xbox360, x360-d, ps3, 3ds, dreamcast and
+# cdi have no EmulatorJS core at all, and tgcd (TurboGrafx-CD) needs a system
+# BIOS this server does not ship. Together that is roughly half the catalogue.
+# Those entries stay in it and stay downloadable -- they are real -- they just
+# cannot claim to play here.
+CORE_ALIASES = {
+    "segacd": "segaCD",
+    "gbc": "gb",
+    "tg16": "pce",
 }
 
-# Display names for the cores EmulatorJS can actually run. Derived from the
-# same set as CORE_TO_EJS on purpose: an entry that has no core has no way to
-# play, and offering it on a shelf labelled "plays instantly" would be a lie.
-# The catalogue also holds systems no browser will ever emulate -- there are
-# Xbox 360 entries in there -- and this is what keeps them off the shelf.
+# Display names, for eyes rather than for logic.
 PLATFORM_NAMES = {
     "nes": "NES", "snes": "SNES", "n64": "Nintendo 64",
-    "gb": "Game Boy", "gbc": "Game Boy Color", "gba": "Game Boy Advance",
-    "nds": "Nintendo DS", "ngc": "GameCube", "wii": "Wii",
-    "genesis": "Genesis", "segacd": "Sega CD", "sega32x": "32X",
-    "sms": "Master System", "gamegear": "Game Gear", "saturn": "Saturn",
-    "dc": "Dreamcast", "psx": "PlayStation", "ps2": "PlayStation 2",
-    "psp": "PSP", "tg16": "TurboGrafx-16", "tgcd": "TurboGrafx-CD",
+    "gb": "Game Boy", "gba": "Game Boy Advance", "nds": "Nintendo DS",
+    "segaMD": "Genesis", "segaCD": "Sega CD", "sega32x": "32X",
+    "segaMS": "Master System", "segaGG": "Game Gear",
+    "segaSaturn": "Saturn", "psx": "PlayStation", "psp": "PSP",
     "atari2600": "Atari 2600", "atari5200": "Atari 5200",
     "atari7800": "Atari 7800", "lynx": "Lynx", "jaguar": "Jaguar",
-    "3do": "3DO", "cdi": "CD-i",
+    "pce": "TurboGrafx-16", "vb": "Virtual Boy", "3do": "3DO",
+    "ngp": "Neo Geo Pocket", "ws": "WonderSwan", "coleco": "ColecoVision",
 }
+
+
+def ejs_core(raw: str) -> str:
+    """The EmulatorJS system id for a catalogue core, or "" if it cannot play.
+
+    Returning "" rather than the raw value is the point. Passing an unknown
+    name through to the player produces a core download that 404s behind a
+    loading bar that never finishes -- a failure with no message, on a page
+    that promised a game.
+    """
+    core = (raw or "").strip()
+    core = CORE_ALIASES.get(core, core)
+    return core if core in EJS_SYSTEMS else ""
+
+
+def playable(item: dict) -> bool:
+    """Whether this entry can boot in a browser. Set at load; see load_catalog."""
+    return bool(item.get("ejs"))
+
 
 CORE_TO_ROMM = {
     "nes": "nes", "snes": "snes", "n64": "n64", "gba": "gba",
-    "gb": "gb", "gbc": "gbc", "genesis": "genesis", "segacd": "segacd",
-    "sega32x": "sega32x", "sms": "mastersystem", "gamegear": "gamegear",
+    "gb": "gb", "gbc": "gbc", "segaMD": "genesis", "segaCD": "segacd",
+    "sega32x": "sega32x", "segaMS": "mastersystem", "segaGG": "gamegear",
     "psx": "psx", "atari2600": "atari2600", "atari5200": "atari5200",
-    "atari7800": "atari7800", "lynx": "lynx", "dc": "dreamcast",
-    "saturn": "saturn", "nds": "nds", "ngc": "gc", "wii": "wii",
-    "psp": "psp", "ps2": "ps2", "jaguar": "jaguar",
+    "atari7800": "atari7800", "lynx": "lynx", "dreamcast": "dreamcast",
+    "segaSaturn": "saturn", "nds": "nds", "gamecube": "gc", "wii": "wii",
+    "psp": "psp", "ps2": "ps2", "jaguar": "jaguar", "pce": "turbografx16",
 }
 
 
@@ -100,8 +139,8 @@ def card_for(item: dict) -> dict:
     vault_id = item.get("vault_id", "")
     title = item.get("title", "Unknown")
     core = item.get("core", "")
-    platform = PLATFORM_NAMES.get(core, core.upper())
-    ejs_core = CORE_TO_EJS.get(core, core)
+    system = item.get("ejs", "")
+    platform = PLATFORM_NAMES.get(system, core.upper())
 
     return {
         "key": f"vimm:{vault_id}",
@@ -116,7 +155,7 @@ def card_for(item: dict) -> dict:
             "sizeHuman": "",
             "seeders": 1,
             "leechers": 0,
-            "magnet": f"{PUBLIC_BASE}/api/rom/{vault_id}#ejs={ejs_core}",
+            "magnet": f"{PUBLIC_BASE}/api/rom/{vault_id}#ejs={system}",
             "quality": "TOUCH",
             "source": platform,
             "codec": "",
@@ -175,6 +214,11 @@ def load_catalog():
                     # left the FILTER matching encoded text, which is why a
                     # search for "arkista's ring" returned nothing.
                     item["title"] = clean_title(item.get("title", ""))
+                    # Resolved once, here, so that the player, the search
+                    # cards and the browser all answer "can this play?" from
+                    # the same value instead of each re-deriving it and
+                    # disagreeing.
+                    item["ejs"] = ejs_core(item.get("core", ""))
                     _catalog[vid] = item
             _catalog_loaded = mtime
     return _catalog
@@ -505,6 +549,43 @@ async def api_stats():
     }
 
 
+def unplayable_page(vault_id: str, safe_title: str, core: str) -> str:
+    """Shown for an entry no browser emulator can run.
+
+    A 404 would be wrong -- the entry exists and its download works -- so this
+    is a 200 that says which machine it is and offers the thing that does work.
+    """
+    machine = html.escape(PLATFORM_NAMES.get(core, core or "this system"))
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{safe_title} - Yarrit ROM Vault</title>
+    <style>
+        body {{ background: #0a0a0a; color: #eee; font-family: system-ui, sans-serif;
+               display: grid; place-items: center; min-height: 100vh; margin: 0; }}
+        .box {{ max-width: 30rem; padding: 2rem; text-align: center; }}
+        h1 {{ font-size: 1.4rem; margin: 0 0 .75rem; }}
+        p {{ color: #999; line-height: 1.5; margin: 0 0 1.5rem; }}
+        a {{ display: inline-block; padding: .6rem 1.2rem; border-radius: .5rem;
+             text-decoration: none; margin: 0 .25rem; }}
+        .go {{ background: #00cc66; color: #000; font-weight: 600; }}
+        .plain {{ background: #222; color: #ccc; }}
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>{safe_title}</h1>
+        <p>This is a {machine} game, and there is no browser emulator that
+           runs {machine}. The download works.</p>
+        <a class="go" href="/api/download/{vault_id}">Download</a>
+        <a class="plain" href="/">Back to the vault</a>
+    </div>
+</body>
+</html>"""
+
+
 @app.get("/play/{vault_id}", response_class=HTMLResponse)
 async def play_page(vault_id: str):
     cat = load_catalog()
@@ -513,10 +594,19 @@ async def play_page(vault_id: str):
         raise HTTPException(404, "Game not found")
 
     core = item.get("core", "")
-    ejs_core = CORE_TO_EJS.get(core, core)
     # load_catalog decoded this, so it must be re-escaped for the markup it
     # lands in -- these titles are scraped from someone else's page.
     safe_title = html.escape(item.get("title", "Unknown"))
+
+    system = item.get("ejs", "")
+    if not system:
+        # Roughly half the catalogue is Xbox 360, PS3, Wii, GameCube, PS2,
+        # Dreamcast or CD-i, none of which EmulatorJS can run. Rendering the
+        # player anyway asks for a core that does not exist, which 404s behind
+        # a loading bar that never finishes -- a page that promised a game and
+        # then says nothing at all. Say it instead, and keep the download,
+        # which does work.
+        return HTMLResponse(unplayable_page(vault_id, safe_title, core), status_code=200)
 
     # The scraper stores this as a path relative to vimm.net -- an unadorned
     # "/image.php?type=screen&id=666" -- so setting it verbatim asks THIS
@@ -561,7 +651,7 @@ async def play_page(vault_id: str):
     <div id="game-container"></div>
     <script>
         EJS_player = '#game-container';
-        EJS_core = '{ejs_core}';
+        EJS_core = '{system}';
         EJS_gameUrl = '/api/rom/{vault_id}';
         {bg_line}
         // Threads are only legal in a cross-origin isolated context. Asserting
@@ -707,16 +797,23 @@ async def vault_index():
             };
 
             data.items.forEach(item => {
+                // `ejs` is empty for a system no browser emulator runs -- Xbox
+                // 360, PS3, Wii, GameCube, PS2, Dreamcast, CD-i, about half the
+                // catalogue. Offering Play on those was a button that led to a
+                // loading bar which never finished.
+                const canPlay = Boolean(item.ejs);
                 const card = node('div', 'card');
                 const h3 = node('h3');
-                h3.appendChild(link(`/play/${item.vault_id}`, null, item.title));
+                h3.appendChild(link(
+                    canPlay ? `/play/${item.vault_id}` : `/api/download/${item.vault_id}`,
+                    null, item.title));
 
                 const meta = node('div', 'meta');
                 meta.appendChild(node('span', 'platform-badge', item.core || item.platform || '?'));
                 meta.appendChild(node('span', null, `#${item.vault_id}`));
 
                 const actions = node('div', 'actions');
-                actions.appendChild(link(`/play/${item.vault_id}`, 'play', 'Play'));
+                if (canPlay) actions.appendChild(link(`/play/${item.vault_id}`, 'play', 'Play'));
                 actions.appendChild(link(`/api/download/${item.vault_id}`, null, 'Download'));
 
                 card.append(h3, meta, actions);
@@ -778,7 +875,7 @@ async def api_search(q: str = "", limit: int = 100):
     
     items = items[:limit]
 
-    cards = [card_for(item) for item in items if PLATFORM_NAMES.get(item.get("core", ""))]
+    cards = [card_for(item) for item in items if playable(item)]
     return {"cards": cards, "facets": None}
 
 

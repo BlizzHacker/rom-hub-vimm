@@ -38,6 +38,25 @@ CATALOG = {
             "playable": True,
         },
         {
+            # Vimm spells it lower-case; EmulatorJS wants segaCD.
+            "vault_id": "12",
+            "title": "Sonic CD",
+            "core": "segacd",
+            "platform": "Sega CD",
+            "size_bytes": 900,
+            "playable": True,
+        },
+        {
+            # A real entry on a machine no browser emulates. Downloadable,
+            # never playable.
+            "vault_id": "34",
+            "title": "Some PS2 Game",
+            "core": "ps2",
+            "platform": "PlayStation 2",
+            "size_bytes": 4000,
+            "playable": True,
+        },
+        {
             # A system no browser will emulate. It must stay in the catalogue
             # -- the entry is real -- and stay off anything that claims to play.
             "vault_id": "77",
@@ -177,6 +196,39 @@ def test_platform_is_a_display_name_not_a_core_id(client):
     cards = {c["title"]: c for c in client.get("/api/search").json()["cards"]}
     assert cards["Arkista's Ring"]["platform"] == "NES"
     assert cards["Advanced Dungeons & Dragons"]["platform"] == "PlayStation"
+
+
+# --- which systems can actually play ----------------------------------------
+
+
+def test_core_case_is_corrected_for_sega_cd(client):
+    """Vimm writes `segacd`; EmulatorJS has `segaCD` and 404s on the other."""
+    assert client.get("/api/game/12").json()["ejs"] == "segaCD"
+    assert "EJS_core = 'segaCD';" in client.get("/play/12").text
+
+
+def test_systems_with_no_emulator_are_not_offered_as_playable(client):
+    """EmulatorJS has no PS2 core, and half the catalogue is machines like it."""
+    assert client.get("/api/game/34").json()["ejs"] == ""
+    titles = [c["title"] for c in client.get("/api/search").json()["cards"]]
+    assert "Some PS2 Game" not in titles
+
+
+def test_an_unplayable_entry_says_so_instead_of_loading_forever(client):
+    """It is a real entry with a working download, so not a 404 -- an answer."""
+    r = client.get("/play/34")
+    assert r.status_code == 200
+    assert "no browser emulator" in r.text
+    assert "/api/download/34" in r.text
+    assert "loader.js" not in r.text
+
+
+def test_unknown_core_never_reaches_the_player(server):
+    """An unrecognised name must resolve to "", not pass through and 404."""
+    assert server.ejs_core("x360-d") == ""
+    assert server.ejs_core("dreamcast") == ""
+    assert server.ejs_core("") == ""
+    assert server.ejs_core("segaMD") == "segaMD"
 
 
 # --- art --------------------------------------------------------------------
