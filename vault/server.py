@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 
 import aiohttp
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -458,16 +458,114 @@ async def api_rom_head(vault_id: str):
     )
 
 
+def download_url_for(item: dict) -> str:
+    """Where the file itself lives, from the catalogue rather than a scrape.
+
+    _get_rom works the URL out by re-reading the PLAY page and pulling
+    EJS_gameUrl off it, which is fine for something playable and useless for
+    anything else: an Xbox 360 entry has no play page, so that lookup returned
+    nothing and every download 502'd. The catalogue has held the real
+    download_url all along.
+
+    download_url is preferred and game_url is the fallback, which is the
+    opposite of what looks right. The stored game_url carries a token
+    vimm.net's data.php minted during the scrape and those EXPIRE: measured
+    2026-08-12, the stored one for vault 78221 answered 404 while the plain
+    ?mediaId= form answered 200 with 418MB. A stale token is worse than no URL
+    because it fails after the response has already begun.
+    """
+    return (item.get("download_url") or item.get("game_url") or "").strip()
+
+
+async def open_vimm_download(url: str, vault_id: str):
+    """Open the transfer and CHECK IT before anything is sent to the client.
+
+    The obvious shape -- return a StreamingResponse whose generator does the
+    fetching -- cannot report an error. FastAPI sends the 200 and the headers
+    the moment the response object exists, so an upstream failure inside the
+    generator arrives as a truncated body with a success status. That is
+    exactly what happened: vimm.net answered 429 while its own scraper was
+    running and the browser was handed a 200 with zero bytes, which reads as a
+    broken file rather than as "slow down".
+
+    So the request is opened here, the status is checked here, and only a
+    response that is really going to deliver bytes becomes a StreamingResponse.
+    The session is handed to the caller to close when the body is done.
+    """
+    timeout = aiohttp.ClientTimeout(total=None, sock_read=120)
+    session = aiohttp.ClientSession(timeout=timeout)
+    try:
+        resp = await session.get(url, headers={
+            "User-Agent": USER_AGENT,
+            # Their download host answers 400 without this.
+            "Referer": f"https://vimm.net/vault/{vault_id}",
+        })
+    except Exception as e:
+        await session.close()
+        raise HTTPException(502, f"Could not reach Vimm: {e}") from e
+
+    if resp.status != 200:
+        detail = {
+            429: "Vimm is rate-limiting this server right now; try again shortly",
+        }.get(resp.status, f"Vimm answered {resp.status} for this file")
+        resp.release()
+        await session.close()
+        raise HTTPException(502, detail)
+    return session, resp
+
+
 @app.get("/api/download/{vault_id}")
 async def api_download(vault_id: str):
-    rom_bytes, filename = await _get_rom(vault_id)
-    return Response(
-        content=rom_bytes,
+    """The file as vimm.net serves it -- archive and all, never unpacked.
+
+    A download is not a ROM handed to an emulator: unpacking it here would cost
+    the whole file in memory to hand back something the person did not ask for,
+    and for a disc image there is nothing to unpack anyway.
+    """
+    cat = load_catalog()
+    item = cat.get(vault_id)
+    if not item:
+        raise HTTPException(404, "Game not found")
+
+    url = download_url_for(item)
+    if not url:
+        # Only now is a scrape worth the round trip, and it still only helps
+        # for something with a play page.
+        token = await scrape_vimm_token(vault_id)
+        url = (token or {}).get("game_url") or ""
+    if not url:
+        raise HTTPException(502, "No download URL for this entry")
+
+    session, resp = await open_vimm_download(url, vault_id)
+
+    filename = item.get("filename") or f"{vault_id}.bin"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-store",
+    }
+    # The REAL length, from the transfer that is about to happen. Never
+    # size_bytes: that is the uncompressed disc image -- 4,584,877,588 for
+    # vault 78221 -- while the file served is a 7z of 418,471,928, and
+    # promising the first while sending the second is a broken download.
+    if resp.headers.get("Content-Length"):
+        headers["Content-Length"] = resp.headers["Content-Length"]
+
+    async def body():
+        try:
+            async for chunk in resp.content.iter_chunked(256 * 1024):
+                yield chunk
+        finally:
+            resp.release()
+            await session.close()
+    # NO Content-Length from size_bytes. That field is the size of the
+    # UNCOMPRESSED disc image -- 4,584,877,588 for vault 78221 -- while the
+    # file vimm.net actually serves is a 7z of 418,471,928. Declaring the
+    # first and sending the second is a promise the transfer cannot keep, and
+    # the browser reports it as a broken download rather than as our error.
+    return StreamingResponse(
+        body(),
         media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Content-Length": str(len(rom_bytes)),
-        },
+        headers=headers,
     )
 
 
