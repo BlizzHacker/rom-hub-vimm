@@ -118,6 +118,26 @@ consume this directly. Each card's URI carries the core as a fragment --
 file extension: `.bin` is Colecovision, Atari 2600 and Mega Drive at once, and
 the wrong core boots successfully and then runs a black screen with no error.
 
+### `ejs` is the field that says whether something can play
+
+`GET /api/catalog` adds one field to each entry that is not in the scraped
+catalogue: **`ejs`**, the EmulatorJS system id, or `""` for an entry no browser
+can run. It is the answer to "can this play?" and it is the field an integrator
+should read.
+
+Read it rather than the raw `core` beside it. `core` is what vimm.net's own
+player declared, and it is not always an EmulatorJS id: Sega CD is `segacd`
+there and `segaCD` in the player, and about half the catalogue names machines
+-- Xbox 360, PS3, Wii, GameCube, PS2, Dreamcast, CD-i -- that have no core at
+all. Resolving one into the other needs the core list of the EmulatorJS release
+being served, which is here and not at the consumer. Of 21,894 entries, 10,607
+resolve to a core.
+
+That is how yarrit.com consumes this: its importer reads `ejs`, stores it, and
+turns those entries into cards that play in its own player while the rest stay
+links to vimm.net. An import that finds no `ejs` produces no playable entries,
+which is the correct answer rather than a guess.
+
 ### The player must be cross-origin isolated
 
 **If you serve the play page without `Cross-Origin-Opener-Policy: same-origin`
