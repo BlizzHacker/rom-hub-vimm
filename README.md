@@ -64,7 +64,7 @@ library credentials.
 ## Install into ROM Hub
 
 ```sh
-rom-hub plugin install https://git.moveweight.com/blizzhacker/rom-hub-vimm --ref v0.2.6
+rom-hub plugin install https://git.moveweight.com/blizzhacker/rom-hub-vimm --ref v0.2.7
 rom-hub plugin config vimm-net --set catalog_path=/path/to/catalog.json
 rom-hub search "sonic" --platform genesis-slash-megadrive
 rom-hub stream vimm-net VAULT_ID
@@ -79,7 +79,7 @@ To make the provider appear in a ROMarr or ROM Hub plugin directory:
 
 ```sh
 rom-hub catalog add blizzhacker-vimm \
-  https://git.moveweight.com/blizzhacker/rom-hub-vimm/raw/tag/v0.2.6/catalog/plugins.json
+  https://git.moveweight.com/blizzhacker/rom-hub-vimm/raw/tag/v0.2.7/catalog/plugins.json
 rom-hub catalog refresh
 ```
 
@@ -87,6 +87,55 @@ Any hosted Yarr.it deployment can use the extension panel immediately. A
 Yarr.it or other server-side integration can consume the same RPP v1 provider
 and exported `catalog.json`; no private domain or vendor-specific API is
 required.
+
+## The vault server
+
+`vault/server.py` is a small FastAPI application that turns the captured
+catalogue into a browsable library with an in-browser player. It is optional --
+the ROM Hub provider above works without it -- and it is what runs at
+vimm.yarrit.com.
+
+```sh
+sh vault/fetch-emulatorjs.sh          # deploy-time dependency, not vendored
+VIMM_CATALOG=/path/to/catalog-enriched.json python3 vault/server.py
+```
+
+Everything it touches is an environment variable, so nothing about one
+deployment is baked in:
+
+| Variable | Default | What it is |
+| --- | --- | --- |
+| `VIMM_CATALOG` | `/opt/rom-hub-vimm-v026/catalog-enriched.json` | the enriched catalogue |
+| `VIMM_EMULATORJS` | `/opt/rom-hub-vimm-v026/emulatorjs` | unpacked EmulatorJS release |
+| `VIMM_ROM_CACHE` | `/opt/vimm-vault/cache` | extracted ROMs |
+| `VIMM_ART_CACHE` | `/opt/vimm-vault/art-cache` | proxied box art |
+| `VIMM_ROMM_LIBRARY` | `/mnt/usb4/romm/library/roms` | where `save-to-romm` writes |
+| `VIMM_PUBLIC_BASE` | `https://vimm.yarrit.com` | origin used in URLs given to other sites |
+
+`GET /api/search` returns Yarr.it-shaped cards, so a Yarr.it deployment can
+consume this directly. Each card's URI carries the core as a fragment --
+`/api/rom/4#ejs=nes` -- because the consumer must never infer a core from a
+file extension: `.bin` is Colecovision, Atari 2600 and Mega Drive at once, and
+the wrong core boots successfully and then runs a black screen with no error.
+
+### The player must be cross-origin isolated
+
+**If you serve the play page without `Cross-Origin-Opener-Policy: same-origin`
+and `Cross-Origin-Embedder-Policy`, no game will start.** EmulatorJS asks for
+threads, threads need `SharedArrayBuffer`, and the browser withholds it outside
+an isolated context. The failure is silent server-side: the page is a 200, the
+service is healthy, nothing is logged, and the only symptom is "Error for site
+owner / Check console" printed over the canvas.
+
+The server sends both headers itself, so a direct deployment is correct by
+default. A reverse proxy in front of it must pass them through.
+
+COEP is `credentialless` rather than `require-corp` on purpose: vimm.net's
+artwork carries no `Cross-Origin-Resource-Policy` header, and require-corp
+would isolate the page by blocking every image on it. Safari does not implement
+`credentialless`, so the page feature-detects (`self.crossOriginIsolated`)
+instead of assuming, and falls back to the single-threaded core rather than
+refusing to boot. Only `ppsspp` and `dosbox_pure` genuinely require threads.
 
 ## Test
 

@@ -1,0 +1,10 @@
+# Catalogues are built on Windows and the server runs on Linux, so line endings
+# are not left to whoever happens to commit. A shell script that reaches the
+# server with CRLF fails as "bad interpreter" -- an error that names the
+# interpreter, not the line endings, and reads like a missing binary.
+* text=auto eol=lf
+*.7z binary
+*.data binary
+*.wasm binary
+*.png binary
+*.jpg binary

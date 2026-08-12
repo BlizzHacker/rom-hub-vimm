@@ -1,6 +1,6 @@
 {
   "catalog_version": "1",
-  "updated": "2026-08-09",
+  "updated": "2026-08-12",
   "plugins": [
     {
       "slug": "vimm-net",
@@ -8,10 +8,10 @@
       "author": "BlizzHacker",
       "repository": "https://git.moveweight.com/blizzhacker/rom-hub-vimm",
       "install": "https://git.moveweight.com/blizzhacker/rom-hub-vimm",
-      "download": "https://git.moveweight.com/blizzhacker/rom-hub-vimm/archive/v0.2.6.tar.gz",
-      "version": "0.2.6",
-      "ref": "v0.2.6",
-      "updated": "2026-08-09",
+      "download": "https://git.moveweight.com/blizzhacker/rom-hub-vimm/archive/v0.2.7.tar.gz",
+      "version": "0.2.7",
+      "ref": "v0.2.7",
+      "updated": "2026-08-12",
       "rpp_version": "1",
       "capabilities": ["search", "importer", "stream"],
       "platforms": [
