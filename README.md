@@ -9,57 +9,35 @@ other hosted or desktop libraries.
 It contains two pieces that share one catalogue:
 
 1. A ROM Hub RPP v1 provider with `search`, `importer`, and `stream`
-   capabilities. Any compatible frontend can search the captured Vimm
-   catalogue, import an entry whose page exposed a download action, and launch
-   an entry whose page exposed **Play Online**.
-2. A Manifest V3 Chromium extension for Brave and Chrome. It builds the
-   catalogue and, on operator-approved hosted library origins, adds a local
-   instant search panel with exact play and download actions.
+   capabilities. Any compatible frontend can search the Vimm catalogue, import
+   an entry that exposes a download action, and launch an entry that exposes
+   **Play Online**.
+2. `vault/`, an optional web server that turns the same catalogue into a
+   browsable library with an in-browser player.
 
-The extension records vault id, media id, title, platform, page URL, filename,
-size, and whether the detail page exposed Play Online and/or a download action.
-The provider validates every captured URL and accepts only HTTPS Vimm URLs.
+The provider validates every URL in the catalogue and accepts only HTTPS Vimm
+URLs.
 
-## Build the Chromium extension
+## The catalogue is included. Do not scan for it.
 
-Build and test on the Proxmox build host:
+`catalog.json` in this repository is the finished thing: **23,980 entries**,
+23,916 of them carrying the EmulatorJS core their vault page declared, plus
+title, platform, filename, size and the play and download actions each entry
+exposes.
 
-```sh
-./scripts/build-extension.sh
-```
+It is committed rather than generated for one reason. A catalogue is built by
+walking somebody else's website a page at a time, and there is no good outcome
+in every reader of this repository being handed the tool to do that again. The
+scan has been run once; the result is here; nobody needs to repeat it.
 
-This creates `dist/vimm-catalogue-extension.zip`. For development, load the
-unpacked `extension/` directory at `brave://extensions` or
-`chrome://extensions` with Developer mode enabled.
-
-## Build a catalogue
-
-Open the extension, choose **Open cataloguer**, and click **Start / Resume**.
-The cataloguer:
-
-- checks `robots.txt` before scanning;
-- discovers Vault list and detail pages from links published by Vimm;
-- makes one request at a time with a configurable delay and backs off after
-  HTTP 429 responses;
-- checkpoints after every page and resumes after browser restarts;
-- records exact play and download actions without activating either during the
-  catalogue pass.
-
-The popup searches completed records immediately, so instant actions become
-available during the scan. Export `catalog.json` when the pass is complete and
-place it at the path configured for the ROM Hub plugin.
+The extension that produced it is **not public**, and its removal from this
+repository's history is deliberate rather than cosmetic.
 
 ## Enable any hosted library
 
-Open the extension popup and add the full origin of each hosted library, for
-example `https://games.example.com`. Chromium asks for permission for that site
-only. Reload the library tab once, then use the floating **Vimm** button.
-
-No MoveWeight domain is built in. The same mechanism works for self-hosted
-RomM, Gaseous, Retrom, ROMarr, Yarr.it, or another browser-based library.
-LaunchBox and other desktop clients consume the exported catalogue through ROM
-Hub or their own adapter instead of browser injection. The extension stores no
-library credentials.
+No MoveWeight domain is built in. This works with self-hosted RomM, Gaseous,
+Retrom, ROMarr, Yarr.it, or another library. LaunchBox and other desktop
+clients consume `catalog.json` through ROM Hub or their own adapter.
 
 ## Install into ROM Hub
 
@@ -83,14 +61,12 @@ rom-hub catalog add blizzhacker-vimm \
 rom-hub catalog refresh
 ```
 
-Any hosted Yarr.it deployment can use the extension panel immediately. A
-Yarr.it or other server-side integration can consume the same RPP v1 provider
-and exported `catalog.json`; no private domain or vendor-specific API is
-required.
+A Yarr.it or other server-side integration consumes the same RPP v1 provider
+and `catalog.json`; no private domain or vendor-specific API is required.
 
 ## The vault server
 
-`vault/server.py` is a small FastAPI application that turns the captured
+`vault/server.py` is a small FastAPI application that turns the
 catalogue into a browsable library with an in-browser player. It is optional --
 the ROM Hub provider above works without it -- and it is what runs at
 vimm.yarrit.com.
@@ -130,8 +106,8 @@ player declared, and it is not always an EmulatorJS id: Sega CD is `segacd`
 there and `segaCD` in the player, and about half the catalogue names machines
 -- Xbox 360, PS3, Wii, GameCube, PS2, Dreamcast, CD-i -- that have no core at
 all. Resolving one into the other needs the core list of the EmulatorJS release
-being served, which is here and not at the consumer. Of 21,894 entries, 10,607
-resolve to a core.
+being served, which is here and not at the consumer. Of 23,980 entries, 23,916
+carry a core the vault could read; the rest are machines with no browser core.
 
 That is how yarrit.com consumes this: its importer reads `ejs`, stores it, and
 turns those entries into cards that play in its own player while the rest stay
@@ -163,11 +139,6 @@ The test suite needs ROM Hub's `src/` on `PYTHONPATH`:
 
 ```sh
 PYTHONPATH=/opt/rom-hub/src pytest -q
-node --check extension/background.js
-node --check extension/vimm-capture.js
-node --check extension/integration.js
-node --check extension/popup.js
-node --check extension/cataloguer.js
 ```
 
 All release builds are produced on the Proxmox server.
