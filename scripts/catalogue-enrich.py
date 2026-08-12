@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""Fill in the catalogue's per-entry detail.
+
+Reads each entry's own vault page and records what that page declares -- the
+player core, the play and download actions, the file name and size -- writing
+the result beside the base catalogue.
+
+The finished catalogue is committed to this repository as catalog.json, so
+this does not need to be run to use the plugin. It exists to refresh the
+catalogue when the source adds entries, one request at a time with a delay
+between them.
+"""
+
 """Scrape Vimm.net play pages to extract EmulatorJS cores and game URLs."""
 
 import json
