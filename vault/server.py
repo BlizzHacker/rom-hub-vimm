@@ -203,8 +203,25 @@ def load_catalog():
     if CATALOG_PATH.exists():
         mtime = CATALOG_PATH.stat().st_mtime
         if mtime > _catalog_loaded:
-            with open(CATALOG_PATH) as f:
-                data = json.load(f)
+            try:
+                with open(CATALOG_PATH) as f:
+                    data = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                # The scraper rewrites this file in place, and it is 14MB, so
+                # there is a window on every pass where it is half a document.
+                # Reading it then raises, and because this runs on the request
+                # path that surfaced as a 500 -- which EmulatorJS reports to
+                # the player as "Network Error", with the file perfectly valid
+                # a second later.
+                #
+                # Keep the catalogue already in memory and do not advance the
+                # mtime, so the next request tries again. A torn read means the
+                # writer is mid-flight, which is a reason to wait rather than
+                # an error anybody can act on. The scraper writes atomically
+                # now, so this should be unreachable; it is the belt to that
+                # brace, because the cost of being wrong is the whole site.
+                print(f"catalogue not readable yet ({e}); keeping {len(_catalog)} entries")
+                return _catalog
             _catalog = {}
             for item in data.get("items", []):
                 vid = item.get("vault_id")

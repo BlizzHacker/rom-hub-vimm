@@ -2,6 +2,7 @@
 """Scrape Vimm.net play pages to extract EmulatorJS cores and game URLs."""
 
 import json
+import os
 import re
 import sys
 import time
@@ -27,6 +28,35 @@ def load_progress():
         with open(PROGRESS_PATH) as f:
             return json.load(f)
     return {"processed": [], "failed": []}
+
+def save_enriched(items):
+    """Write the enriched catalogue atomically.
+
+    It is 14MB and it is rewritten every ten pages, so an in-place truncate
+    leaves a multi-second window on every pass where the file on disk is half a
+    JSON document. The vault server reads this same path on a request, and a
+    read landing in that window raised JSONDecodeError and turned into a 500 --
+    which the player reports as "Network Error" on a game that works perfectly
+    a second later.
+
+    Writing beside it and renaming makes the swap atomic: a reader sees either
+    the whole old file or the whole new one. os.replace is the atomic form and
+    works on Windows too, where os.rename onto an existing path fails.
+    """
+    tmp = ENRICHED_PATH.with_suffix(".json.tmp")
+    with open(tmp, "w") as f:
+        json.dump({
+            "version": 1,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "source": "Vimm.net scraper",
+            "items": items,
+        }, f, indent=2)
+        # The rename can otherwise beat the data to disk, so a crash leaves a
+        # file that is present, named correctly and truncated.
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, ENRICHED_PATH)
+
 
 def save_progress(progress):
     """Save scraper progress."""
@@ -107,14 +137,7 @@ def enrich_catalog():
             progress["failed"] = list(failed)
             save_progress(progress)
             
-            # Save enriched catalogue
-            with open(ENRICHED_PATH, "w") as f:
-                json.dump({
-                    "version": 1,
-                    "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "source": "Vimm.net scraper",
-                    "items": enriched
-                }, f, indent=2)
+            save_enriched(enriched)
         
         # Rate limit
         time.sleep(DELAY)
@@ -124,13 +147,7 @@ def enrich_catalog():
     progress["failed"] = list(failed)
     save_progress(progress)
     
-    with open(ENRICHED_PATH, "w") as f:
-        json.dump({
-            "version": 1,
-            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "source": "Vimm.net scraper",
-            "items": enriched
-        }, f, indent=2)
+    save_enriched(enriched)
     
     print(f"\nEnrichment complete!")
     print(f"  Processed: {len(processed)}")

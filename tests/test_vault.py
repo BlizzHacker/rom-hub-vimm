@@ -257,3 +257,48 @@ def test_no_background_emits_no_background_global(client):
 
 async def _fake_rom(vault_id: str):
     return b"NES\x1a", "test.nes"
+
+
+# --- reading a catalogue that is being rewritten ----------------------------
+
+
+def test_a_half_written_catalogue_keeps_the_last_good_one(client, server, tmp_path):
+    """The scraper rewrites 14MB in place; a read can land mid-write.
+
+    That raised JSONDecodeError on the request path, which became a 500, which
+    EmulatorJS shows the player as "Network Error" -- on a game that works
+    perfectly a second later. The catalogue already in memory is the right
+    answer while a writer is mid-flight.
+    """
+    assert client.get("/api/game/4").json()["title"] == "Arkista's Ring"
+
+    catalog = tmp_path / "catalog.json"
+    torn = json.dumps(CATALOG)[: len(json.dumps(CATALOG)) // 2]
+    catalog.write_text(torn)
+    # Force the mtime check to notice the file changed.
+    import os
+
+    os.utime(catalog, (9e9, 9e9))
+
+    assert client.get("/api/game/4").status_code == 200
+    assert client.get("/api/game/4").json()["title"] == "Arkista's Ring"
+
+
+def test_the_catalogue_is_picked_up_again_once_the_write_finishes(client, tmp_path):
+    """A torn read must not latch. The next good file has to be loaded."""
+    catalog = tmp_path / "catalog.json"
+    import os
+
+    catalog.write_text(json.dumps(CATALOG)[:200])
+    os.utime(catalog, (9e9, 9e9))
+    assert client.get("/api/game/4").status_code == 200  # served from memory
+
+    grown = json.loads(json.dumps(CATALOG))
+    grown["items"].append({
+        "vault_id": "555", "title": "Later Arrival", "core": "gba",
+        "platform": "Game Boy Adv", "size_bytes": 1, "playable": True,
+    })
+    catalog.write_text(json.dumps(grown))
+    os.utime(catalog, (9e9 + 10, 9e9 + 10))
+
+    assert client.get("/api/game/555").json()["title"] == "Later Arrival"
